@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Tool</title>
+  <style>
+    body {
+      background-color: #f0f0f0; /* Light gray background */
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    #container {
+      background-color: #fff; /* White container background */
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    #cropContainer {
+      display: none;
+    }
+
+    audio {
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    button {
+      margin-top: 10px;
+    }
+
+    .crop-timestamps {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>Audio Tool</h1>
+    <label for="speedRange">Speed:</label>
+    <input type="range" id="speedRange" min="50" max="200" value="100">
+    <span id="speedValue">100%</span>
+    <br>
+    <input type="file" id="audioFile" accept="audio/*">
+    <audio controls id="audioPlayer"></audio>
+    <button id="downloadButton" style="display: none;">Download</button>
+  </div>
+
+  <div id="cropContainer">
+    <h1>Audio Crop Tool</h1>
+    <select id="cropTimestamps" class="crop-timestamps">
+      <option value="30">30 seconds</option>
+      <option value="60">1 minute</option>
+      <option value="90">1 minute 30 seconds</option>
+    </select>
+    <br>
+    <button id="cropButton">Crop and Download</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const speedRange = document.getElementById('speedRange');
+      const speedValue = document.getElementById('speedValue');
+      const audioFile = document.getElementById('audioFile');
+      const audioPlayer = document.getElementById('audioPlayer');
+      const downloadButton = document.getElementById('downloadButton');
+      const cropContainer = document.getElementById('cropContainer');
+      const cropTimestamps = document.getElementById('cropTimestamps');
+      const cropButton = document.getElementById('cropButton');
+
+      speedRange.addEventListener('input', updateSpeed);
+      audioFile.addEventListener('change', handleFile);
+      downloadButton.addEventListener('click', downloadAudio);
+      cropButton.addEventListener('click', cropAudio);
+
+      function updateSpeed() {
+        const speed = speedRange.value;
+        speedValue.textContent = speed + '%';
+        updateAudioSpeed(speed);
+      }
+
+      function updateAudioSpeed(speed) {
+        const audio = audioPlayer;
+        audio.playbackRate = speed / 100;
+      }
+
+      function handleFile() {
+        const file = audioFile.files[0];
+
+        if (file) {
+          const objectURL = URL.createObjectURL(file);
+          audioPlayer.src = objectURL;
+          audioPlayer.load();
+          downloadButton.style.display = 'inline';
+        }
+      }
+
+      function downloadAudio() {
+        const a = document.createElement('a');
+        a.href = audioPlayer.src;
+        a.download = 'audio_modified.mp3';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+      function cropAudio() {
+        const selectedTimestamp = cropTimestamps.value;
+        const audio = audioPlayer;
+        const duration = audio.duration;
+
+        if (duration < selectedTimestamp) {
+          alert('Selected timestamp exceeds the duration of the audio.');
+          return;
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const croppedAudio = document.createElement('audio');
+
+        canvas.width = audio.offsetWidth;
+        canvas.height = audio.offsetHeight;
+
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const startTime = 0;
+        const endTime = selectedTimestamp;
+
+        const source = audio.cloneNode();
+        source.currentTime = startTime;
+
+        const sourceNode = ctx.createMediaElementSource(source);
+        sourceNode.connect(ctx.destination);
+
+        source.play();
+
+        source.onended = () => {
+          const audioBlob = canvas.toDataURL('audio/mp3');
+          const a = document.createElement('a');
+          a.href = audioBlob;
+          a.download = 'audio_cropped.mp3';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        };
+      }
+    });
+  </script>
+</body>
+</html>
